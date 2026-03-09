@@ -167,5 +167,6 @@ requestAnimationFrame(animate);
 
 }
 
+
 generateCircles(20); // 20 círculos
 animate();
