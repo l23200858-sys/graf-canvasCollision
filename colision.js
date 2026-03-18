@@ -1,172 +1,133 @@
 const canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 
-const window_height = window.innerHeight;
-const window_width = window.innerWidth;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-canvas.height = window_height;
-canvas.width = window_width;
-canvas.style.background = "#ff8";
+// 🎯 CONTADOR
+let score = 0;
 
-class Circle {
+// 🖼️ IMAGEN (puedes cambiarla)
+const img = new Image();
+img.src = "https://cdn-icons-png.flaticon.com/512/616/616494.png";
 
-constructor(x, y, radius, color, text, speed) {
+// =====================
+// CLASE OBJETO
+// =====================
+class FallingObject {
+  constructor(x, y, size, speed) {
+    this.x = x;
+    this.y = y;
+    this.size = size;
+    this.speed = speed;
+  }
 
-this.posX = x;
-this.posY = y;
-this.radius = radius;
+  draw() {
+    ctx.drawImage(img, this.x, this.y, this.size, this.size);
+  }
 
-this.color = color;
-this.originalColor = color;
+  update() {
+    this.y += this.speed;
 
-this.text = text;
+    // Si sale de pantalla → reaparece arriba
+    if (this.y > canvas.height) {
+      this.reset();
+    }
+  }
 
-this.speed = speed;
+  reset() {
+    this.x = Math.random() * (canvas.width - this.size);
+    this.y = -this.size; // arriba del canvas
+    this.speed = getSpeed();
+  }
 
-this.dx = (Math.random() < 0.5 ? -1 : 1) * this.speed;
-this.dy = (Math.random() < 0.5 ? -1 : 1) * this.speed;
-
-this.flash = 0; // frames para parpadear
+  // 🎯 DETECCIÓN DE CLICK
+  isClicked(mouseX, mouseY) {
+    return (
+      mouseX >= this.x &&
+      mouseX <= this.x + this.size &&
+      mouseY >= this.y &&
+      mouseY <= this.y + this.size
+    );
+  }
 }
 
-draw(context) {
-
-context.beginPath();
-
-context.strokeStyle = this.color;
-
-context.textAlign = "center";
-context.textBaseline = "middle";
-context.font = "20px Arial";
-
-context.fillText(this.text, this.posX, this.posY);
-
-context.lineWidth = 2;
-
-context.arc(this.posX, this.posY, this.radius, 0, Math.PI * 2);
-
-context.stroke();
-context.closePath();
+// =====================
+// VELOCIDAD DINÁMICA
+// =====================
+function getSpeed() {
+  if (score > 15) return Math.random() * 6 + 6;   // alta
+  if (score > 10) return Math.random() * 4 + 4;   // media
+  return Math.random() * 2 + 2;                   // inicial
 }
 
-move() {
+// =====================
+// CREAR OBJETOS
+// =====================
+let objects = [];
 
-this.posX += this.dx;
-this.posY += this.dy;
+function generateObjects(n) {
+  for (let i = 0; i < n; i++) {
+    let size = Math.random() * 40 + 40;
+    let x = Math.random() * (canvas.width - size);
+    let y = Math.random() * -canvas.height;
 
-if (this.posX + this.radius > window_width || this.posX - this.radius < 0) {
-this.dx = -this.dx;
+    objects.push(new FallingObject(x, y, size, getSpeed()));
+  }
 }
 
-if (this.posY + this.radius > window_height || this.posY - this.radius < 0) {
-this.dy = -this.dy;
-}
+// =====================
+// CLICK DEL MOUSE
+// =====================
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
 
-}
-
-checkCollision(otherCircle) {
-
-let dx = this.posX - otherCircle.posX;
-let dy = this.posY - otherCircle.posY;
-
-let distance = Math.sqrt(dx * dx + dy * dy);
-
-if (distance <= this.radius + otherCircle.radius) {
-
-/* REBOTE */
-let tempDx = this.dx;
-let tempDy = this.dy;
-
-this.dx = otherCircle.dx;
-this.dy = otherCircle.dy;
-
-otherCircle.dx = tempDx;
-otherCircle.dy = tempDy;
-
-/* ACTIVAR FLASH */
-this.flash = 10;
-otherCircle.flash = 10;
-
-}
-
-}
-
-updateFlash(){
-
-if(this.flash > 0){
-
-this.color = "#0000FF";
-this.flash--;
-
-}else{
-
-this.color = this.originalColor;
-
-}
-
-}
-
-update(context){
-
-this.move();
-this.updateFlash();
-this.draw(context);
-
-}
-
-}
-
-let circles = [];
-
-function generateCircles(n){
-
-for(let i = 0; i < n; i++){
-
-let radius = Math.random() * 30 + 20;
-
-let x = Math.random() * (window_width - radius * 2) + radius;
-let y = Math.random() * (window_height - radius * 2) + radius;
-
-let color = `#${Math.floor(Math.random()*16777215).toString(16)}`;
-
-let speed = Math.random() * 4 + 1; // velocidad 1-5
-
-let text = `C${i+1}`;
-
-circles.push(new Circle(x,y,radius,color,text,speed));
-
-}
-
-}
-
-function detectCollisions(){
-
-for(let i=0;i<circles.length;i++){
-
-for(let j=i+1;j<circles.length;j++){
-
-circles[i].checkCollision(circles[j]);
-
-}
-
-}
-
-}
-
-function animate(){
-
-ctx.clearRect(0,0,window_width,window_height);
-
-circles.forEach(circle=>{
-circle.update(ctx);
+  objects.forEach(obj => {
+    if (obj.isClicked(mouseX, mouseY)) {
+      score++;
+      obj.reset(); // reaparece (no se elimina definitivamente)
+    }
+  });
 });
 
-detectCollisions();
-
-requestAnimationFrame(animate);
-
+// =====================
+// DIBUJAR CONTADOR
+// =====================
+function drawScore() {
+  ctx.fillStyle = "white";
+  ctx.font = "25px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText("Puntos: " + score, canvas.width - 20, 40);
 }
 
+// =====================
+// ANIMACIÓN
+// =====================
+function animate() {
 
-generateCircles(20); // 20 círculos
+  // 🎨 FONDO (degradado)
+  let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "#1e3c72");
+  gradient.addColorStop(1, "#2a5298");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Objetos
+  objects.forEach(obj => {
+    obj.update();
+    obj.draw();
+  });
+
+  drawScore();
+
+  requestAnimationFrame(animate);
+}
+
+// =====================
+// INICIO
+// =====================
+generateObjects(15);
 animate();
